@@ -1,7 +1,10 @@
 # HGL
 
 HGL은 Hangulize 2에서 언어 별 전사 규칙을 표현하기 위한 형식이다. 이름은
-`hangulize`의 자음 `H`, `G`, `L`에서 따왔다.
+`hangulize`의 자음 `H`, `G`, `L`에서 따왔다. HGL 파일의 미디어타입은
+[`text/vnd.hgl`][media-type]이다.
+
+[media-type]: https://www.iana.org/assignments/media-types/text/vnd.hgl
 
 
 ## 문법
