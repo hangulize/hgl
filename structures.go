@@ -7,8 +7,17 @@ import (
 // HGL is a decoding result of an HGL code.
 type HGL map[string]Section
 
+// Liner holds the line number.
+//
+// Section and Pair is a liner.
+//
+type Liner interface {
+	Line() int
+}
+
 // Section contains pairs.
 type Section interface {
+	Liner
 	Pairs() []Pair
 	addPair(string, []string) error
 }
@@ -24,6 +33,8 @@ type Section interface {
 type Pair struct {
 	l string
 	r []string
+
+	line int
 }
 
 func (p *Pair) String() string {
@@ -58,17 +69,23 @@ func (p Pair) Right() []string {
 	return p.r
 }
 
+// Line returns the line number where the pair is defined.
+func (p *Pair) Line() int {
+	return p.line
+}
+
 // -----------------------------------------------------------------------------
 // ListSection
 
 // ListSection has an ordered list of pairs.
 type ListSection struct {
 	pairs []Pair
+	line  int
 }
 
 // newListSection creates an empty list section.
-func newListSection() *ListSection {
-	return &ListSection{make([]Pair, 0)}
+func newListSection(line int) *ListSection {
+	return &ListSection{make([]Pair, 0), line}
 }
 
 // Pairs returns underlying pairs as an array.
@@ -77,9 +94,14 @@ func (s *ListSection) Pairs() []Pair {
 }
 
 // addPair adds a pair into a list section. It never fails.
-func (s *ListSection) addPair(l string, r []string) error {
-	s.pairs = append(s.pairs, Pair{l, r})
+func (s *ListSection) addPair(l string, r []string, line int) error {
+	s.pairs = append(s.pairs, Pair{l, r, line})
 	return nil
+}
+
+// Line returns the line number where the list section is defined.
+func (s *ListSection) Line() int {
+	return s.line
 }
 
 // Array returns the underying pair array of a list section.
@@ -93,12 +115,13 @@ func (s *ListSection) Array() []Pair {
 // DictSection has an unordered list of pairs.
 // Each left of underlying pairs is unique.
 type DictSection struct {
-	dict map[string][]string
+	dict map[string]Pair
+	line int
 }
 
 // newDictSection creates an empty dict section.
-func newDictSection() *DictSection {
-	return &DictSection{make(map[string][]string)}
+func newDictSection(line int) *DictSection {
+	return &DictSection{make(map[string]Pair), line}
 }
 
 // Pairs returns dict key-values as an array of pairs.
@@ -106,8 +129,8 @@ func (s *DictSection) Pairs() []Pair {
 	pairs := make([]Pair, len(s.dict))
 
 	i := 0
-	for l, r := range s.dict {
-		pairs[i] = Pair{l, r}
+	for _, pair := range s.dict {
+		pairs[i] = pair
 		i++
 	}
 
@@ -116,19 +139,30 @@ func (s *DictSection) Pairs() []Pair {
 
 // addPair adds a pair into a dict section. If there's already a pair having
 // same left, it will fails.
-func (s *DictSection) addPair(l string, r []string) error {
+func (s *DictSection) addPair(l string, r []string, line int) error {
 	_, ok := s.dict[l]
 	if ok {
 		return fmt.Errorf("left of pair duplicated: %#v", l)
 	}
 
-	s.dict[l] = r
+	s.dict[l] = Pair{l, r, line}
 	return nil
+}
+
+// Line returns the line number where the dict section is defined.
+func (s *DictSection) Line() int {
+	return s.line
 }
 
 // Map returns the underying map of a dict section.
 func (s *DictSection) Map() map[string][]string {
-	return s.dict
+	m := make(map[string][]string, len(s.dict))
+
+	for _, pair := range s.dict {
+		m[pair.Left()] = pair.Right()
+	}
+
+	return m
 }
 
 // Injective returns the underying 1-to-1 map of a dict section.
@@ -136,12 +170,15 @@ func (s *DictSection) Map() map[string][]string {
 func (s *DictSection) Injective() (map[string]string, error) {
 	oneToOne := make(map[string]string, len(s.dict))
 
-	for left, right := range s.dict {
+	for _, pair := range s.dict {
+		right := pair.Right()
+
 		if len(right) != 1 {
 			err := fmt.Errorf("right %#v has multiple values", right)
 			return nil, err
 		}
-		oneToOne[left] = right[0]
+
+		oneToOne[pair.Left()] = right[0]
 	}
 
 	return oneToOne, nil
@@ -150,11 +187,13 @@ func (s *DictSection) Injective() (map[string]string, error) {
 // One assumes the given left (key) has only one right (values). Then returns
 // the only right value.
 func (s *DictSection) One(left string) string {
-	right, ok := s.dict[left]
+	pair, ok := s.dict[left]
 
 	if !ok {
 		return ""
 	}
+
+	right := pair.Right()
 
 	if len(right) == 0 {
 		return ""
@@ -165,11 +204,11 @@ func (s *DictSection) One(left string) string {
 
 // All returns the right values.
 func (s *DictSection) All(left string) []string {
-	right, ok := s.dict[left]
+	pair, ok := s.dict[left]
 
 	if !ok {
 		return make([]string, 0)
 	}
 
-	return right
+	return pair.Right()
 }
