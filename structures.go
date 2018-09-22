@@ -7,6 +7,15 @@ import (
 // HGL is a decoding result of an HGL code.
 type HGL map[string]Section
 
+// Section contains pairs.
+type Section interface {
+	Pairs() []Pair
+	addPair(string, []string) error
+}
+
+// -----------------------------------------------------------------------------
+// Pair
+
 // Pair is a left-right tuple:
 //
 //  aa -> "ㅏ", "ㅐ"
@@ -49,21 +58,12 @@ func (p Pair) Right() []string {
 	return p.r
 }
 
-// Section contains pairs.
-type Section interface {
-	Pairs() []Pair
-	addPair(string, []string) error
-}
+// -----------------------------------------------------------------------------
+// ListSection
 
 // ListSection has an ordered list of pairs.
 type ListSection struct {
 	pairs []Pair
-}
-
-// DictSection has an unordered list of pairs.
-// Each left of underlying pairs is unique.
-type DictSection struct {
-	dict map[string][]string
 }
 
 // newListSection creates an empty list section.
@@ -71,16 +71,34 @@ func newListSection() *ListSection {
 	return &ListSection{make([]Pair, 0)}
 }
 
-// newDictSection creates an empty dict section.
-func newDictSection() *DictSection {
-	return &DictSection{make(map[string][]string)}
-}
-
-// common section methods
-
 // Pairs returns underlying pairs as an array.
 func (s *ListSection) Pairs() []Pair {
 	return s.pairs
+}
+
+// addPair adds a pair into a list section. It never fails.
+func (s *ListSection) addPair(l string, r []string) error {
+	s.pairs = append(s.pairs, Pair{l, r})
+	return nil
+}
+
+// Array returns the underying pair array of a list section.
+func (s *ListSection) Array() []Pair {
+	return s.pairs
+}
+
+// -----------------------------------------------------------------------------
+// DictSection
+
+// DictSection has an unordered list of pairs.
+// Each left of underlying pairs is unique.
+type DictSection struct {
+	dict map[string][]string
+}
+
+// newDictSection creates an empty dict section.
+func newDictSection() *DictSection {
+	return &DictSection{make(map[string][]string)}
 }
 
 // Pairs returns dict key-values as an array of pairs.
@@ -96,12 +114,6 @@ func (s *DictSection) Pairs() []Pair {
 	return pairs
 }
 
-// addPair adds a pair into a list section. It never fails.
-func (s *ListSection) addPair(l string, r []string) error {
-	s.pairs = append(s.pairs, Pair{l, r})
-	return nil
-}
-
 // addPair adds a pair into a dict section. If there's already a pair having
 // same left, it will fails.
 func (s *DictSection) addPair(l string, r []string) error {
@@ -113,15 +125,6 @@ func (s *DictSection) addPair(l string, r []string) error {
 	s.dict[l] = r
 	return nil
 }
-
-// ListSection only methods
-
-// Array returns the underying pair array of a list section.
-func (s *ListSection) Array() []Pair {
-	return s.pairs
-}
-
-// DictSection only methods
 
 // Map returns the underying map of a dict section.
 func (s *DictSection) Map() map[string][]string {
