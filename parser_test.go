@@ -23,7 +23,7 @@ func TestParseSinglePairList(t *testing.T) {
 		t.Error(err)
 	}
 
-	foo := hgl["foo"].(*ListSection).Array()
+	foo := hgl["foo"].(*ListSection).Pairs()
 
 	assert.Equal(t, "hello", foo[0].Left())
 	assert.Equal(t, []string{"world"}, foo[0].Right())

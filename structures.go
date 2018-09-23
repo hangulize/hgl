@@ -103,11 +103,6 @@ func (s *ListSection) addPair(l string, r []string, line int) error {
 	return nil
 }
 
-// Array returns the underying pair array of a list section.
-func (s *ListSection) Array() []Pair {
-	return s.pairs
-}
-
 // -----------------------------------------------------------------------------
 // DictSection
 
