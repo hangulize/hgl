@@ -8,9 +8,11 @@ import (
 // parser ...
 type parser struct {
 	lexer *lexer
-	buf   struct {
+
+	buf struct {
 		tok   token
 		lit   string
+		line  int
 		reuse bool
 	}
 }
@@ -20,20 +22,21 @@ func newParser(r io.Reader) *parser {
 	return &parser{lexer: newLexer(r)}
 }
 
-func (p *parser) scan() (token, string) {
+func (p *parser) scan() (token, string, int) {
 	// If unscan() performed, reuses the latest token and literal.
 	if p.buf.reuse {
 		p.buf.reuse = false
-		return p.buf.tok, p.buf.lit
+		return p.buf.tok, p.buf.lit, p.buf.line
 	}
 
 	// Scan the next one.
 	tok, lit := p.lexer.Scan()
+	line := p.lexer.Line()
 
 	// Keep the latest token and literal to reuse.
-	p.buf.tok, p.buf.lit = tok, lit
+	p.buf.tok, p.buf.lit, p.buf.line = tok, lit, line
 
-	return tok, lit
+	return tok, lit, line
 }
 
 func (p *parser) unscan() error {
@@ -49,11 +52,20 @@ func (p *parser) unscan() error {
 func (p *parser) parse() (HGL, error) {
 	hgl := make(HGL)
 
-	var lastString string
-	var sectionName string
+	var (
+		lastString  string
+		sectionName string
+		sectionLine int
+	)
+
+	var (
+		tok  token
+		lit  string
+		line int
+	)
 
 	for {
-		tok, lit := p.scan()
+		tok, lit, line = p.scan()
 
 		// The common behavior for useless tokens.
 		if tok == Illegal {
@@ -73,6 +85,7 @@ func (p *parser) parse() (HGL, error) {
 		// If a colon found, the last string is a section name.
 		if tok == Colon {
 			sectionName = lastString
+			sectionLine = line
 			continue
 		}
 
@@ -95,7 +108,7 @@ func (p *parser) parse() (HGL, error) {
 				section, ok = hgl[sectionName]
 
 				if !ok {
-					section = newDictSection()
+					section = newDictSection(sectionLine)
 					hgl[sectionName] = section
 				}
 			}
@@ -106,12 +119,12 @@ func (p *parser) parse() (HGL, error) {
 				section, ok = hgl[sectionName]
 
 				if !ok {
-					section = newListSection()
+					section = newListSection(sectionLine)
 					hgl[sectionName] = section
 				}
 			}
 
-			section.addPair(lastString, values)
+			section.addPair(lastString, values, line)
 			continue
 		}
 	}
@@ -123,7 +136,7 @@ func (p *parser) parseValues() ([]string, error) {
 	values := make([]string, 0)
 
 	for {
-		tok, lit := p.scan()
+		tok, lit, _ := p.scan()
 
 		// The common behavior for useless tokens.
 		if tok == Illegal {
