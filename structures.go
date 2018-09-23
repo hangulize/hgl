@@ -7,9 +7,9 @@ import (
 // HGL is a decoding result of an HGL code.
 type HGL map[string]Section
 
-// Liner holds the line number.
+// Liner holds the line number belonging to the node.
 //
-// Section and Pair is a liner.
+// All HGL nodes should implement this interface.
 //
 type Liner interface {
 	Line() int
@@ -19,7 +19,17 @@ type Liner interface {
 type Section interface {
 	Liner
 	Pairs() []Pair
-	addPair(string, []string) error
+	addPair(string, []string, int) error
+}
+
+// liner implements the Liner interface.
+type liner struct {
+	line int
+}
+
+// Line returns the line number where the node is defined.
+func (l liner) Line() int {
+	return l.line
 }
 
 // -----------------------------------------------------------------------------
@@ -33,8 +43,7 @@ type Section interface {
 type Pair struct {
 	l string
 	r []string
-
-	line int
+	liner
 }
 
 func (p *Pair) String() string {
@@ -69,23 +78,18 @@ func (p Pair) Right() []string {
 	return p.r
 }
 
-// Line returns the line number where the pair is defined.
-func (p *Pair) Line() int {
-	return p.line
-}
-
 // -----------------------------------------------------------------------------
 // ListSection
 
 // ListSection has an ordered list of pairs.
 type ListSection struct {
 	pairs []Pair
-	line  int
+	liner
 }
 
 // newListSection creates an empty list section.
 func newListSection(line int) *ListSection {
-	return &ListSection{make([]Pair, 0), line}
+	return &ListSection{make([]Pair, 0), liner{line}}
 }
 
 // Pairs returns underlying pairs as an array.
@@ -95,13 +99,8 @@ func (s *ListSection) Pairs() []Pair {
 
 // addPair adds a pair into a list section. It never fails.
 func (s *ListSection) addPair(l string, r []string, line int) error {
-	s.pairs = append(s.pairs, Pair{l, r, line})
+	s.pairs = append(s.pairs, Pair{l, r, liner{line}})
 	return nil
-}
-
-// Line returns the line number where the list section is defined.
-func (s *ListSection) Line() int {
-	return s.line
 }
 
 // Array returns the underying pair array of a list section.
@@ -116,12 +115,12 @@ func (s *ListSection) Array() []Pair {
 // Each left of underlying pairs is unique.
 type DictSection struct {
 	dict map[string]Pair
-	line int
+	liner
 }
 
 // newDictSection creates an empty dict section.
 func newDictSection(line int) *DictSection {
-	return &DictSection{make(map[string]Pair), line}
+	return &DictSection{make(map[string]Pair), liner{line}}
 }
 
 // Pairs returns dict key-values as an array of pairs.
@@ -145,13 +144,8 @@ func (s *DictSection) addPair(l string, r []string, line int) error {
 		return fmt.Errorf("left of pair duplicated: %#v", l)
 	}
 
-	s.dict[l] = Pair{l, r, line}
+	s.dict[l] = Pair{l, r, liner{line}}
 	return nil
-}
-
-// Line returns the line number where the dict section is defined.
-func (s *DictSection) Line() int {
-	return s.line
 }
 
 // Map returns the underying map of a dict section.
