@@ -45,3 +45,24 @@ func TestParseSinglePairDict(t *testing.T) {
 
 	assert.Equal(t, []string{"world"}, foo["hello"])
 }
+
+func TestLine(t *testing.T) {
+	p := _newParser(`
+	foo:
+		hello = "world"
+
+	bar:
+
+		"egg" -> "spam"
+	`)
+
+	hgl, err := p.parse()
+	if err != nil {
+		t.Error(err)
+	}
+
+	assert.Equal(t, 1, hgl["foo"].(*DictSection).Line())
+	assert.Equal(t, 2, hgl["foo"].Pairs()[0].Line())
+	assert.Equal(t, 4, hgl["bar"].(*ListSection).Line())
+	assert.Equal(t, 6, hgl["bar"].Pairs()[0].Line())
+}

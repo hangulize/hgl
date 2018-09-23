@@ -11,27 +11,45 @@ import (
 // lexer reads a bytes buffer and pops the peak token and literal.
 type lexer struct {
 	r *bufio.Reader
+
+	line     int
+	prevLine int
 }
 
 // newLexer creates a Lexer.
 func newLexer(r io.Reader) *lexer {
-	return &lexer{r: bufio.NewReader(r)}
+	return &lexer{bufio.NewReader(r), 1, 1}
 }
 
 const eof = rune(0)
 
+// Line returns the current line number.
+func (l *lexer) Line() int {
+	return l.line
+}
+
 // read reads the rune on the buffer cursor.
 func (l *lexer) read() rune {
 	ch, _, err := l.r.ReadRune()
+
 	if err != nil {
 		return eof
 	}
+
+	l.prevLine = l.line
+	if ch == '\n' {
+		l.line++
+	}
+
 	return ch
 }
 
 // unread rewinds the buffer cursor once.
 func (l *lexer) unread() {
-	_ = l.r.UnreadRune()
+	err := l.r.UnreadRune()
+	if err == nil {
+		l.line = l.prevLine
+	}
 }
 
 // readWhile reads runes as a string during
