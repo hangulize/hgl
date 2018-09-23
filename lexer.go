@@ -24,7 +24,7 @@ func newLexer(r io.Reader) *lexer {
 const eof = rune(0)
 
 // Line returns the current line number.
-func (l *lexer) Line() int {
+func (l lexer) Line() int {
 	return l.line
 }
 

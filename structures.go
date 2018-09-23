@@ -46,7 +46,7 @@ type Pair struct {
 	liner
 }
 
-func (p *Pair) String() string {
+func (p Pair) String() string {
 	return fmt.Sprintf("Pair{%#v, %#v}", p.l, p.r)
 }
 
@@ -93,7 +93,7 @@ func newListSection(line int) *ListSection {
 }
 
 // Pairs returns underlying pairs as an array.
-func (s *ListSection) Pairs() []Pair {
+func (s ListSection) Pairs() []Pair {
 	return s.pairs
 }
 
@@ -119,7 +119,7 @@ func newDictSection(line int) *DictSection {
 }
 
 // Pairs returns dict key-values as an array of pairs.
-func (s *DictSection) Pairs() []Pair {
+func (s DictSection) Pairs() []Pair {
 	pairs := make([]Pair, len(s.dict))
 
 	i := 0
@@ -144,7 +144,7 @@ func (s *DictSection) addPair(l string, r []string, line int) error {
 }
 
 // Map returns the underying map of a dict section.
-func (s *DictSection) Map() map[string][]string {
+func (s DictSection) Map() map[string][]string {
 	m := make(map[string][]string, len(s.dict))
 
 	for _, pair := range s.dict {
@@ -156,7 +156,7 @@ func (s *DictSection) Map() map[string][]string {
 
 // Injective returns the underying 1-to-1 map of a dict section.
 // If some right (values) has multiple values, it returns an error.
-func (s *DictSection) Injective() (map[string]string, error) {
+func (s DictSection) Injective() (map[string]string, error) {
 	oneToOne := make(map[string]string, len(s.dict))
 
 	for _, pair := range s.dict {
@@ -175,7 +175,7 @@ func (s *DictSection) Injective() (map[string]string, error) {
 
 // One assumes the given left (key) has only one right (values). Then returns
 // the only right value.
-func (s *DictSection) One(left string) string {
+func (s DictSection) One(left string) string {
 	pair, ok := s.dict[left]
 
 	if !ok {
@@ -192,7 +192,7 @@ func (s *DictSection) One(left string) string {
 }
 
 // All returns the right values.
-func (s *DictSection) All(left string) []string {
+func (s DictSection) All(left string) []string {
 	pair, ok := s.dict[left]
 
 	if !ok {
